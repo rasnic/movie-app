@@ -33,7 +33,7 @@ A high-performance React application for browsing movies with strict keyboard-on
 
 1. Clone the repository:
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/rasnic/movie-app.git
 cd movie-app
 ```
 
