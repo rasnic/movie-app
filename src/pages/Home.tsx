@@ -17,15 +17,16 @@ const CATEGORIES = [
 const Home: React.FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { list, category, loading } = useSelector((state: RootState) => state.movies);
+  const { list, category, loading, page, totalPages, error, searchQuery } = useSelector((state: RootState) => state.movies);
 
-  const [activeSection, setActiveSection] = useState<'search' | 'categories' | 'grid'>('categories');
+  const [activeSection, setActiveSection] = useState<'search' | 'categories' | 'grid' | 'pagination'>('categories');
   const [categoryIndex, setCategoryIndex] = useState(0);
   const [gridIndex, setGridIndex] = useState(0);
-  const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [paginationIndex, setPaginationIndex] = useState(0); // 0: Prev, 1: Next
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
 
   useEffect(() => {
-    dispatch(fetchMoviesRequest({ page: 1, category }));
+    dispatch(fetchMoviesRequest({ page, category, query: searchQuery }));
   }, [dispatch]);
 
   const categoryTimerRef = useRef<number | null>(null);
@@ -40,6 +41,7 @@ const Home: React.FC = () => {
       categoryTimerRef.current = window.setTimeout(() => {
         dispatch(setCategory(targetCategory as any));
         dispatch(fetchMoviesRequest({ page: 1, category: targetCategory }));
+        setGridIndex(0);
       }, 2000);
     }
     return () => {
@@ -75,6 +77,7 @@ const Home: React.FC = () => {
            if (target !== category) {
              dispatch(setCategory(target as any));
              dispatch(fetchMoviesRequest({ page: 1, category: target }));
+             setGridIndex(0);
            }
         }
       }
@@ -92,7 +95,12 @@ const Home: React.FC = () => {
         if (e.key === 'ArrowLeft') setGridIndex(prev => Math.max(prev - 1, 0));
         
         if (e.key === 'ArrowDown') {
-           setGridIndex(prev => (prev + columns < count ? prev + columns : prev));
+           if (gridIndex + columns < count) {
+             setGridIndex(prev => prev + columns);
+           } else if (category !== 'favorites') {
+             setActiveSection('pagination');
+             setPaginationIndex(page > 1 ? 0 : 1);
+           }
         }
         
         if (e.key === 'ArrowUp') {
@@ -105,24 +113,64 @@ const Home: React.FC = () => {
           });
         }
       }
+
+      else if (activeSection === 'pagination') {
+        if (e.key === 'ArrowUp') {
+          setActiveSection('grid');
+          // Try to focus the last row of the grid
+          const columns = 4;
+          const count = list.length;
+          const lastRowStart = Math.floor((count - 1) / columns) * columns;
+          setGridIndex(lastRowStart);
+        }
+        if (e.key === 'ArrowLeft' && page > 1) setPaginationIndex(0);
+        if (e.key === 'ArrowRight' && page < totalPages) setPaginationIndex(1);
+        
+        if (e.key === 'Enter') {
+          if (paginationIndex === 0 && page > 1) {
+            dispatch(fetchMoviesRequest({ page: page - 1, category, query: searchQuery }));
+            setGridIndex(0);
+            setActiveSection('grid');
+          } else if (paginationIndex === 1 && page < totalPages) {
+            dispatch(fetchMoviesRequest({ page: page + 1, category, query: searchQuery }));
+            setGridIndex(0);
+            setActiveSection('grid');
+          }
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, categoryIndex, gridIndex, list, dispatch, navigate, category]);
+  }, [activeSection, categoryIndex, gridIndex, paginationIndex, list, dispatch, navigate, category, page, totalPages, searchQuery]);
+
+  // Scroll to top when page or category changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page, category]);
 
   useEffect(() => {
-     if (activeSection === 'grid') {
+     if (activeSection === 'grid' && !loading) {
         const el = document.getElementById(`movie-${gridIndex}`);
+        if (el) {
+           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+     } else if (activeSection === 'pagination') {
+        const el = document.querySelector('.pagination-controls');
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
      }
-  }, [gridIndex, activeSection]);
+  }, [gridIndex, activeSection, loading]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const value = e.target.value;
      setLocalSearchQuery(value);
      dispatch(setSearchQuery(value));
+     setGridIndex(0);
   };
+
+  useEffect(() => {
+    setLocalSearchQuery(searchQuery);
+  }, [searchQuery]);
 
   return (
     <div className="home-page container">
@@ -152,6 +200,7 @@ const Home: React.FC = () => {
                  setActiveSection('categories');
                  dispatch(setCategory(cat.id as any));
                  dispatch(fetchMoviesRequest({ page: 1, category: cat.id }));
+                 setGridIndex(0);
               }}
             >
               {cat.label}
@@ -162,7 +211,9 @@ const Home: React.FC = () => {
 
       <main className="movie-grid">
          {loading && <div className="loader">Loading...</div>}
-         {!loading && list.map((movie: any, idx: number) => (
+         {error && <div className="error-message">Error: {error}</div>}
+         {!loading && !error && list.length === 0 && <div className="no-results">No movies found.</div>}
+         {!loading && !error && list.map((movie: any, idx: number) => (
             <MovieCard
                key={movie.id}
                id={`movie-${idx}`}
@@ -172,6 +223,42 @@ const Home: React.FC = () => {
             />
          ))}
       </main>
+
+      {category !== 'favorites' && totalPages > 1 && !error && (
+        <div className="pagination-controls">
+          <button
+            className={classNames('btn-pagination', {
+              focused: activeSection === 'pagination' && paginationIndex === 0,
+              disabled: page <= 1
+            })}
+            onClick={() => {
+              if (page > 1) {
+                dispatch(fetchMoviesRequest({ page: page - 1, category, query: searchQuery }));
+                setGridIndex(0);
+              }
+            }}
+          >
+            Previous
+          </button>
+          <span className="page-info">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className={classNames('btn-pagination', {
+              focused: activeSection === 'pagination' && paginationIndex === 1,
+              disabled: page >= totalPages
+            })}
+            onClick={() => {
+              if (page < totalPages) {
+                dispatch(fetchMoviesRequest({ page: page + 1, category, query: searchQuery }));
+                setGridIndex(0);
+              }
+            }}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,12 +1,14 @@
 
 import { takeLatest, put, call, debounce, select } from 'redux-saga/effects';
-import { fetchMoviesRequest, fetchMoviesSuccess, fetchMoviesFailure, searchMoviesRequest, setSearchQuery } from './moviesSlice';
+import { fetchMoviesRequest, fetchMoviesSuccess, fetchMoviesFailure, setSearchQuery } from './moviesSlice';
 import { getMovies, searchMovies } from '../../api/tmdb';
 import { type PayloadAction } from '@reduxjs/toolkit';
+import { type RootState } from '../store';
+import { type SagaIterator } from 'redux-saga';
 
-function* handleFetchMovies(action: ReturnType<typeof fetchMoviesRequest>) {
+function* handleFetchMovies(action: ReturnType<typeof fetchMoviesRequest>): SagaIterator {
   try {
-    const { category, page } = action.payload;
+    const { category, page, query } = action.payload;
 
     if (category === 'favorites') {
       const favs = JSON.parse(localStorage.getItem('my_favorites') || '[]');
@@ -14,14 +16,17 @@ function* handleFetchMovies(action: ReturnType<typeof fetchMoviesRequest>) {
       return;
     }
 
-    const response: { results: any[]; total_pages: number } = yield call(getMovies, category, page);
-    yield put(fetchMoviesSuccess(response));
+    const response: { results: any[]; total_pages: number } = query
+      ? yield call(searchMovies, query, page)
+      : yield call(getMovies, category, page);
+
+    yield put(fetchMoviesSuccess({ ...response, page }));
   } catch (error: any) {
     yield put(fetchMoviesFailure(error.message || 'Failed to fetch movies'));
   }
 }
 
-function* handleSearchMovies(action: PayloadAction<string>) {
+function* handleSearchMovies(action: PayloadAction<string>): SagaIterator {
   const query = action.payload;
   if (query.length < 2) {
     const state: any = yield select();
@@ -31,9 +36,8 @@ function* handleSearchMovies(action: PayloadAction<string>) {
   }
 
   try {
-    yield put(searchMoviesRequest({ query, page: 1 }));
-    const response: { results: any[]; total_pages: number } = yield call(searchMovies, query, 1);
-    yield put(fetchMoviesSuccess(response));
+    const state: RootState = yield select();
+    yield put(fetchMoviesRequest({ query, page: 1, category: state.movies.category }));
   } catch (error: any) {
     yield put(fetchMoviesFailure(error.message || 'Search failed'));
   }

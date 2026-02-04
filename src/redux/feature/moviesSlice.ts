@@ -46,14 +46,17 @@ const moviesSlice = createSlice({
         state.list = [];
       }
     },
-    fetchMoviesRequest(state, _action: PayloadAction<{ page: number; category: string }>) {
+    fetchMoviesRequest(state, _action: PayloadAction<{ page: number; category: string; query?: string }>) {
       state.loading = true;
       state.error = null;
     },
-    fetchMoviesSuccess(state, action: PayloadAction<{ results: Movie[]; total_pages: number }>) {
+    fetchMoviesSuccess(state, action: PayloadAction<{ results: Movie[]; total_pages: number; page?: number }>) {
       state.loading = false;
       state.list = action.payload.results;
       state.totalPages = action.payload.total_pages;
+      if (action.payload.page) {
+        state.page = action.payload.page;
+      }
     },
     fetchMoviesFailure(state, action: PayloadAction<string>) {
       state.loading = false;
@@ -62,9 +65,12 @@ const moviesSlice = createSlice({
     searchMoviesRequest(state, _action: PayloadAction<{ query: string; page: number }>) {
       state.loading = true;
       state.error = null;
+    },
+    setPage(state, action: PayloadAction<number>) {
+      state.page = action.payload;
     }
   },
 });
 
-export const { setCategory, setSearchQuery, fetchMoviesRequest, fetchMoviesSuccess, fetchMoviesFailure, searchMoviesRequest } = moviesSlice.actions;
+export const { setCategory, setSearchQuery, fetchMoviesRequest, fetchMoviesSuccess, fetchMoviesFailure, searchMoviesRequest, setPage } = moviesSlice.actions;
 export default moviesSlice.reducer;
