@@ -42,17 +42,12 @@ cd movie-app
 npm install
 ```
 
-3. Create a `.env` file in the root directory:
-```bash
-VITE_TMDB_API_KEY=your_api_key_here
-```
-
-4. Start the development server:
+3. Start the development server:
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:5173](http://localhost:5173) in your browser
+4. Open [http://localhost:5173](http://localhost:5173) in your browser
 
 ## Keyboard Controls
 
