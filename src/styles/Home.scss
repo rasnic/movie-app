@@ -1,0 +1,82 @@
+@import '../styles/global.scss';
+
+.home-page {
+  padding-top: 40px;
+
+  .app-header {
+    margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+
+    h1 {
+      color: $color-primary;
+      font-size: 3rem;
+      letter-spacing: -2px;
+    }
+
+    input {
+      width: 100%;
+      max-width: 500px;
+      padding: 15px 20px;
+      font-size: 1.2rem;
+      background-color: $color-surface;
+      border: 1px solid #333;
+      border-radius: 50px;
+      color: white;
+      transition: all 0.3s ease;
+
+      &.focused,
+      &:focus {
+        outline: none;
+        border-color: $color-primary;
+        box-shadow: 0 0 15px rgba($color-primary, 0.3);
+      }
+    }
+
+    .categories-nav {
+      display: flex;
+      gap: 20px;
+
+      .btn-category {
+        background: transparent;
+        border: none;
+        color: $color-text-secondary;
+        font-size: 1.1rem;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: color 0.2s, transform 0.2s;
+
+        &.active {
+          color: white;
+          font-weight: bold;
+          border-bottom: 2px solid $color-primary;
+        }
+
+        &.focused {
+          background-color: rgba(255, 255, 255, 0.1);
+          color: white;
+          transform: scale(1.1);
+          outline: 2px solid $color-primary;
+        }
+      }
+    }
+  }
+
+  .movie-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); // Constraint: 4 cards per row
+    gap: 30px;
+    padding-bottom: 50px;
+
+    @media (max-width: 1000px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 700px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}

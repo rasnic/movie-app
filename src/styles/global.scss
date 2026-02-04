@@ -1,0 +1,45 @@
+
+// Variables
+$color-bg: #121212;
+$color-surface: #1e1e1e;
+$color-primary: #e50914;
+$color-text: #ffffff;
+$color-text-secondary: #b3b3b3;
+$focus-border: 2px solid $color-primary;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: $color-bg;
+  color: $color-text;
+  overflow: hidden; // Disable mouse scrolling
+  user-select: none;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+// Global Focus Styles
+.focused {
+  outline: none;
+  border: $focus-border !important;
+  transform: scale(1.05);
+  transition: transform 0.2s, border 0.1s;
+  z-index: 10;
+  box-shadow: 0 0 10px rgba($color-primary, 0.5);
+}
+
+// Utility
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
