@@ -51,6 +51,11 @@ const Details: React.FC = () => {
   // Keyboard Handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        return;
+      }
+
       if (e.key === 'Escape') {
         navigate(-1); // Back
       }

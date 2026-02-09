@@ -67,12 +67,5 @@ export const useKeyboardNav = ({ columns, itemCount, onSelect, onBack }: Navigat
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  useEffect(() => {
-    const element = document.getElementById(`nav-item-${selectedIndex}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [selectedIndex]);
-
   return { selectedIndex, setSelectedIndex };
 };

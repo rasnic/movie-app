@@ -17,7 +17,14 @@ const CATEGORIES = [
 const Home: React.FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { list, category, loading, page, totalPages, error, searchQuery } = useSelector((state: RootState) => state.movies);
+  const { cache, category, loading, error, searchQuery } = useSelector((state: RootState) => state.movies);
+  const currentData = cache[category];
+  const list = currentData.list;
+  const page = currentData.page;
+  const totalPages = currentData.totalPages;
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const movieRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const [activeSection, setActiveSection] = useState<'search' | 'categories' | 'grid' | 'pagination'>('categories');
   const [categoryIndex, setCategoryIndex] = useState(0);
@@ -26,8 +33,10 @@ const Home: React.FC = () => {
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
 
   useEffect(() => {
-    dispatch(fetchMoviesRequest({ page, category, query: searchQuery }));
-  }, [dispatch]);
+    if (list.length === 0) {
+      dispatch(fetchMoviesRequest({ page, category, query: searchQuery }));
+    }
+  }, [dispatch, category, page, list.length, searchQuery]);
 
   const categoryTimerRef = useRef<number | null>(null);
 
@@ -39,8 +48,12 @@ const Home: React.FC = () => {
       if (targetCategory === category) return;
 
       categoryTimerRef.current = window.setTimeout(() => {
+        const targetCategory = CATEGORIES[categoryIndex].id;
         dispatch(setCategory(targetCategory as any));
-        dispatch(fetchMoviesRequest({ page: 1, category: targetCategory }));
+        const targetCache = cache[targetCategory as keyof typeof cache];
+        if (targetCache.list.length === 0) {
+          dispatch(fetchMoviesRequest({ page: 1, category: targetCategory }));
+        }
         setGridIndex(0);
       }, 2000);
     }
@@ -51,6 +64,11 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        return;
+      }
+
       if (activeSection === 'search') {
          if (e.key === 'ArrowDown') {
            setActiveSection('categories');
@@ -151,7 +169,7 @@ const Home: React.FC = () => {
 
   useEffect(() => {
      if (activeSection === 'grid' && !loading) {
-        const el = document.getElementById(`movie-${gridIndex}`);
+        const el = movieRefs.current[gridIndex];
         if (el) {
            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -160,6 +178,12 @@ const Home: React.FC = () => {
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
      }
   }, [gridIndex, activeSection, loading]);
+
+  useEffect(() => {
+    if (activeSection === 'search' && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [activeSection]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
      const value = e.target.value;
@@ -178,6 +202,7 @@ const Home: React.FC = () => {
         <h1>MovieDB</h1>
         
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="Search movies..."
           value={localSearchQuery}
@@ -214,13 +239,17 @@ const Home: React.FC = () => {
          {error && <div className="error-message">Error: {error}</div>}
          {!loading && !error && list.length === 0 && <div className="no-results">No movies found.</div>}
          {!loading && !error && list.map((movie: any, idx: number) => (
-            <MovieCard
-               key={movie.id}
-               id={`movie-${idx}`}
-               movie={movie}
-               isFocused={activeSection === 'grid' && gridIndex === idx}
-               onClick={() => navigate(`/movie/${movie.id}`)}
-            />
+            <div 
+              key={movie.id} 
+              ref={el => { movieRefs.current[idx] = el; }}
+            >
+              <MovieCard
+                 id={`movie-${idx}`}
+                 movie={movie}
+                 isFocused={activeSection === 'grid' && gridIndex === idx}
+                 onClick={() => navigate(`/movie/${movie.id}`)}
+              />
+            </div>
          ))}
       </main>
 

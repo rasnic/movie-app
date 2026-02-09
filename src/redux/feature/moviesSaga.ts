@@ -12,7 +12,7 @@ function* handleFetchMovies(action: ReturnType<typeof fetchMoviesRequest>): Saga
 
     if (category === 'favorites') {
       const favs = JSON.parse(localStorage.getItem('my_favorites') || '[]');
-      yield put(fetchMoviesSuccess({ results: favs, total_pages: 1 }));
+      yield put(fetchMoviesSuccess({ results: favs, total_pages: 1, category: 'favorites' }));
       return;
     }
 
@@ -20,7 +20,7 @@ function* handleFetchMovies(action: ReturnType<typeof fetchMoviesRequest>): Saga
       ? yield call(searchMovies, query, page)
       : yield call(getMovies, category, page);
 
-    yield put(fetchMoviesSuccess({ ...response, page }));
+    yield put(fetchMoviesSuccess({ ...response, page, category, isSearch: !!query }));
   } catch (error: any) {
     yield put(fetchMoviesFailure(error.message || 'Failed to fetch movies'));
   }

@@ -12,20 +12,26 @@ export interface Movie {
 
 interface MoviesState {
   category: 'popular' | 'now_playing' | 'favorites';
-  list: Movie[];
+  cache: {
+    [key in 'popular' | 'now_playing' | 'favorites']: {
+      list: Movie[];
+      page: number;
+      totalPages: number;
+    }
+  };
   loading: boolean;
-  page: number;
-  totalPages: number;
   error: string | null;
   searchQuery: string;
 }
 
 const initialState: MoviesState = {
   category: 'popular',
-  list: [],
+  cache: {
+    popular: { list: [], page: 1, totalPages: 1 },
+    now_playing: { list: [], page: 1, totalPages: 1 },
+    favorites: { list: [], page: 1, totalPages: 1 },
+  },
   loading: false,
-  page: 1,
-  totalPages: 1,
   error: null,
   searchQuery: '',
 };
@@ -37,25 +43,33 @@ const moviesSlice = createSlice({
     setCategory(state, action: PayloadAction<'popular' | 'now_playing' | 'favorites'>) {
       state.category = action.payload;
       state.searchQuery = '';
-      state.page = 1;
-      state.list = [];
     },
     setSearchQuery(state, action: PayloadAction<string>) {
       state.searchQuery = action.payload;
-      if (action.payload.length < 2) {
-        state.list = [];
-      }
     },
     fetchMoviesRequest(state, _action: PayloadAction<{ page: number; category: string; query?: string }>) {
       state.loading = true;
       state.error = null;
     },
-    fetchMoviesSuccess(state, action: PayloadAction<{ results: Movie[]; total_pages: number; page?: number }>) {
+    fetchMoviesSuccess(state, action: PayloadAction<{ results: Movie[]; total_pages: number; page?: number; category: string; isSearch?: boolean }>) {
       state.loading = false;
-      state.list = action.payload.results;
-      state.totalPages = action.payload.total_pages;
-      if (action.payload.page) {
-        state.page = action.payload.page;
+      const { results, total_pages, page, category, isSearch } = action.payload;
+
+      if (isSearch) {
+        // We don't cache search results in the category buckets for now to keep it simple,
+        // or we could add a search bucket. Let's just update the list for the current view.
+        // However, the requirement is about categories.
+        state.cache[state.category] = {
+          list: results,
+          page: page || 1,
+          totalPages: total_pages
+        };
+      } else if (category && (category === 'popular' || category === 'now_playing' || category === 'favorites')) {
+        state.cache[category] = {
+          list: results,
+          page: page || 1,
+          totalPages: total_pages,
+        };
       }
     },
     fetchMoviesFailure(state, action: PayloadAction<string>) {
@@ -67,7 +81,9 @@ const moviesSlice = createSlice({
       state.error = null;
     },
     setPage(state, action: PayloadAction<number>) {
-      state.page = action.payload;
+      if (state.cache[state.category]) {
+        state.cache[state.category].page = action.payload;
+      }
     }
   },
 });
